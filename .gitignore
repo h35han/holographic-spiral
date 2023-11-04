@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.blend?
 .DS_Store
 .atom/
 .buildlog/
