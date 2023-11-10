@@ -2,6 +2,11 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:holographic_spiral/util.dart';
+import 'package:holographic_spiral/util.dart';
+
+import 'painter.dart';
+import 'sandbox.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -11,7 +16,8 @@ class App extends StatelessWidget {
     return const MaterialApp(
       themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: Card(),
+      // home: Card(),
+      home: SandboxPage(),
     );
   }
 }
@@ -29,18 +35,22 @@ class Card extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return BumpyDiffractionBuilder2(
-              programFuture: ui.FragmentProgram.fromAsset('shaders/diffraction.glsl'),
-              cFuture0: AssetImageProvider("assets/textures/normal.png").image,
-              cFuture1: AssetImageProvider("assets/textures/alpha.png").image,
+              programFuture: ui.FragmentProgram.fromAsset('shaders/diffraction.frag'),
+              cFuture0: imageFromAsset("assets/textures/normal.png"),
+              cFuture1: imageFromAsset("assets/textures/alpha.png"),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  var decorator = snapshot.data!;
-                  decorator.setSize(constraints.biggest);
-                  return CustomPaint(
-                    painter: ShaderPainter(shader: decorator.shader),
+                  snapshot.data!.setSize(constraints.biggest);
+                  return AnimatedCard(decorator: snapshot.data!);
+                }
+
+                if (snapshot.hasError) {
+                  return SingleChildScrollView(
+                    child: ErrorWidget(snapshot.error!),
                   );
                 }
 
+                return const Placeholder();
                 return const SizedBox.shrink();
               },
             );
@@ -48,6 +58,53 @@ class Card extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class AnimatedCard extends StatefulWidget {
+  const AnimatedCard({super.key, required this.decorator});
+
+  final BumpyDiffractionShaderDecorator decorator;
+
+  @override
+  State<AnimatedCard> createState() => _AnimatedCardState();
+}
+
+class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(seconds: 2),
+    vsync: this,
+  )..repeat(reverse: true);
+  late final Animation<Offset> _offsetAnimation = Tween<Offset>(
+    begin: const Offset(200, 100),
+    end: const Offset(200, 200),
+  ).animate(CurvedAnimation(
+    parent: _controller,
+    curve: Curves.linear,
+  ));
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _offsetAnimation,
+      builder: (context, child) {
+        widget.decorator.setOffset(_offsetAnimation.value);
+        return CustomPaint(
+          painter: ShaderPainter(shader: widget.decorator.shader),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
 
@@ -75,13 +132,7 @@ class BumpyDiffractionShaderDecorator {
   }
 }
 
-class AssetImageProvider {
-  String path;
 
-  AssetImageProvider(this.path);
-
-  Future<ui.Image> get image async => decodeImageFromList((await rootBundle.load(path)).buffer.asUint8List());
-}
 
 class BumpyDiffractionBuilder2 extends StatelessWidget {
   const BumpyDiffractionBuilder2({
@@ -126,19 +177,3 @@ class BumpyDiffractionBuilder2 extends StatelessWidget {
   }
 }
 
-class ShaderPainter extends CustomPainter {
-  final ui.FragmentShader shader;
-
-  ShaderPainter({required this.shader});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..shader = shader
-      ..filterQuality = ui.FilterQuality.high;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
