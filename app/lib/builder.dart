@@ -23,7 +23,6 @@ class FragmentProgramLoaderBuilder extends StatelessWidget {
 
 typedef ImageLoaderWidgetBuilder = AsyncWidgetBuilder<List<ui.Image>>;
 
-
 class ImageLoaderBuilder extends StatelessWidget {
   const ImageLoaderBuilder({super.key, required this.assetKeys, required this.builder});
 
