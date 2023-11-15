@@ -1,9 +1,8 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'builder.dart';
-import 'painter.dart';
 
 class DiffractionSpiral extends StatelessWidget {
   const DiffractionSpiral({super.key, required this.size});
@@ -95,6 +94,21 @@ class DiffractionPaint extends StatelessWidget {
   }
 }
 
+class ShaderPainter extends CustomPainter {
+  final FragmentShader shader;
+
+  ShaderPainter({required this.shader});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()..shader = shader;
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
 class DiffractionOffset extends InheritedWidget {
   const DiffractionOffset({super.key, required this.listenable, required super.child});
 
@@ -130,3 +144,4 @@ class DiffractionOffset extends InheritedWidget {
   @override
   bool updateShouldNotify(covariant InheritedWidget oldWidget) => false;
 }
+
