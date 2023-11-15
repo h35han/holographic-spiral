@@ -1,179 +1,130 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:holographic_spiral/util.dart';
-import 'package:holographic_spiral/util.dart';
 
-import 'painter.dart';
-import 'sandbox.dart';
+import 'spiral.dart';
+import 'marker.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      themeMode: ThemeMode.light,
-      debugShowCheckedModeBanner: false,
-      // home: Card(),
-      home: SandboxPage(),
+    return const MaterialApp(themeMode: ThemeMode.light, debugShowCheckedModeBanner: false, home: HomeView());
+  }
+}
+
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
+
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: GestureBuilder(
+        builder: (context, listenable, child) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              DiffractionOffset(
+                listenable: listenable,
+                child: const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Card(),
+                  ),
+                ),
+              ),
+              ValueListenableBuilder(
+                valueListenable: listenable,
+                builder: (context, value, child) {
+                  return OffsetMarker(
+                    correction: const Offset(.5, .5),
+                    value: value,
+                    child: child,
+                  );
+                },
+              )
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
 class Card extends StatelessWidget {
-  const Card({super.key});
+  const Card({super.key, this.markerVisibility = true});
+
+  final bool markerVisibility;
 
   @override
   Widget build(BuildContext context) {
-    // return Placeholder();
-
-    return Center(
-      child: SizedBox.fromSize(
-        size: Size.square(MediaQuery.of(context).size.width),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return BumpyDiffractionBuilder2(
-              programFuture: ui.FragmentProgram.fromAsset('shaders/diffraction.frag'),
-              cFuture0: imageFromAsset("assets/textures/normal.png"),
-              cFuture1: imageFromAsset("assets/textures/alpha.png"),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  snapshot.data!.setSize(constraints.biggest);
-                  return AnimatedCard(decorator: snapshot.data!);
-                }
-
-                if (snapshot.hasError) {
-                  return SingleChildScrollView(
-                    child: ErrorWidget(snapshot.error!),
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(
+        color: const Color(0xFF000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(
+            color: Color(0xFF393939),
+            width: 0.5,
+            strokeAlign: BorderSide.strokeAlignOutside,
+          ),
+        ),
+      ),
+      child: AspectRatio(
+        aspectRatio: 1.6279,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return DiffractionSpiral(
+                    size: Size.square(constraints.biggest.width),
                   );
-                }
-
-                return const Placeholder();
-                return const SizedBox.shrink();
-              },
-            );
-          },
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class AnimatedCard extends StatefulWidget {
-  const AnimatedCard({super.key, required this.decorator});
+class GestureBuilder extends StatelessWidget {
+  const GestureBuilder({super.key, required this.builder, this.child});
 
-  final BumpyDiffractionShaderDecorator decorator;
-
-  @override
-  State<AnimatedCard> createState() => _AnimatedCardState();
-}
-
-class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    duration: const Duration(seconds: 2),
-    vsync: this,
-  )..repeat(reverse: true);
-  late final Animation<Offset> _offsetAnimation = Tween<Offset>(
-    begin: const Offset(200, 100),
-    end: const Offset(200, 200),
-  ).animate(CurvedAnimation(
-    parent: _controller,
-    curve: Curves.linear,
-  ));
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  final ValueWidgetBuilder<ValueNotifier<Offset>> builder;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _offsetAnimation,
-      builder: (context, child) {
-        widget.decorator.setOffset(_offsetAnimation.value);
-        return CustomPaint(
-          painter: ShaderPainter(shader: widget.decorator.shader),
+    final size = MediaQuery.of(context).size;
+
+    /// Gesture input converts into a [-1, 1] normalized vector
+    /// [0, 0] is in the middle of the touch area
+    convert(Offset offset) => Offset(
+          // offset.dx / size.width,
+          ((offset.dx / size.width) * scale - (scale / 2)),
+          ((offset.dy / size.height) * scale - (scale / 2)),
         );
-      },
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: (details) => listenable.value = convert(details.localPosition),
+      onPanDown: (details) => listenable.value = convert(details.localPosition),
+      child: builder(context, listenable, child),
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  static const scale = 5;
+  static ValueNotifier<Offset> listenable = ValueNotifier(Offset.zero);
 }
-
-class BumpyDiffractionShaderDecorator {
-  ui.FragmentShader shader;
-
-  BumpyDiffractionShaderDecorator({
-    required this.shader,
-  });
-
-  setTexture(int index, ui.Image texture) {
-    shader.setImageSampler(index, texture);
-  }
-
-  setSize(Size size) {
-    shader = shader
-      ..setFloat(0, size.height)
-      ..setFloat(1, size.width);
-  }
-
-  setOffset(Offset offset) {
-    shader = shader
-      ..setFloat(2, offset.dx)
-      ..setFloat(3, offset.dy);
-  }
-}
-
-
-
-class BumpyDiffractionBuilder2 extends StatelessWidget {
-  const BumpyDiffractionBuilder2({
-    super.key,
-    required this.programFuture,
-    required this.cFuture0,
-    required this.cFuture1,
-    required this.builder,
-  });
-
-  final Future<ui.FragmentProgram> programFuture;
-  final Future<ui.Image> cFuture0;
-  final Future<ui.Image> cFuture1;
-  final AsyncWidgetBuilder<BumpyDiffractionShaderDecorator> builder;
-
-  Future<BumpyDiffractionShaderDecorator> createShader() async {
-    final program = await programFuture;
-    final shader = program.fragmentShader();
-    return BumpyDiffractionShaderDecorator(shader: shader)
-      ..setTexture(0, await cFuture0)
-      ..setTexture(1, await cFuture1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: createShader(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return builder(
-            context,
-            AsyncSnapshot.withData(
-              snapshot.connectionState,
-              snapshot.data!,
-            ),
-          );
-        }
-
-        return builder(context, snapshot);
-      },
-    );
-  }
-}
-
