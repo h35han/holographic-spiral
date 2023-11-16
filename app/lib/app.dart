@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import 'spiral.dart';
 import 'marker.dart';
@@ -9,7 +12,11 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(themeMode: ThemeMode.light, debugShowCheckedModeBanner: false, home: HomeView());
+    return const MaterialApp(
+      themeMode: ThemeMode.light,
+      debugShowCheckedModeBanner: false,
+      home: HomeView(),
+    );
   }
 }
 
@@ -45,24 +52,27 @@ class _HomeViewState extends State<HomeView> {
               child: Card(),
             ),
           ),
-          ValueListenableBuilder(
-            valueListenable: listenable,
-            builder: (context, value, child) {
-              return OffsetMarker(
-                correction: const Offset(.5, .5),
-                value: value,
-                child: child,
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: ValueListenableBuilder(
+              valueListenable: listenable,
+              builder: (context, value, child) {
+                return OffsetMarker(
+                  correction: const Offset(.5, .5),
+                  value: value,
+                  child: child,
+                );
+              },
+            ),
           ),
         ],
       );
     }
 
     Widget child = switch (source) {
-      InputSource.animated => AnimatedOffsetListenerProvider(builder: builder),
-      InputSource.gesture => GestureDragOffsetListenableProvider(builder: builder),
-      _ => AnimatedOffsetListenerProvider(builder: builder)
+      InputSource.animated => AnimatedOffsetListenerWidget(builder: builder),
+      InputSource.gesture => GestureDragOffsetListenableWidget(builder: builder),
+      InputSource.gyro => GyroscopeListenableWidget(builder: builder),
     };
 
     return Scaffold(
@@ -72,6 +82,7 @@ class _HomeViewState extends State<HomeView> {
             child,
             TextButton(onPressed: () => setState(() => source = InputSource.gesture), child: const Text("Gesture")),
             TextButton(onPressed: () => setState(() => source = InputSource.animated), child: const Text("Animation")),
+            TextButton(onPressed: () => setState(() => source = InputSource.gyro), child: const Text("Gyroscope")),
           ],
         ),
       ),
@@ -155,17 +166,17 @@ class Card extends StatelessWidget {
   }
 }
 
-class GestureDragOffsetListenableProvider extends StatefulWidget {
-  const GestureDragOffsetListenableProvider({super.key, required this.builder, this.child});
+class GestureDragOffsetListenableWidget extends StatefulWidget {
+  const GestureDragOffsetListenableWidget({super.key, required this.builder, this.child});
 
   final ValueWidgetBuilder<ValueNotifier<Offset>> builder;
   final Widget? child;
 
   @override
-  State<GestureDragOffsetListenableProvider> createState() => _GestureDragOffsetListenableProviderState();
+  State<GestureDragOffsetListenableWidget> createState() => _GestureDragOffsetListenableWidgetState();
 }
 
-class _GestureDragOffsetListenableProviderState extends State<GestureDragOffsetListenableProvider> {
+class _GestureDragOffsetListenableWidgetState extends State<GestureDragOffsetListenableWidget> {
   final ValueNotifier<Offset> listenable = ValueNotifier(Offset.zero);
   static const scale = 5;
 
@@ -189,36 +200,72 @@ class _GestureDragOffsetListenableProviderState extends State<GestureDragOffsetL
   }
 }
 
-class AnimatedOffsetListenerProvider extends StatefulWidget {
-  const AnimatedOffsetListenerProvider({super.key, required this.builder, this.child});
+class GyroscopeListenableWidget extends StatefulWidget {
+  const GyroscopeListenableWidget({super.key, required this.builder, this.child});
+
+  final ValueWidgetBuilder<ValueNotifier<Offset>> builder;
+  final Widget? child;
+
+  @override
+  State<GyroscopeListenableWidget> createState() => _GyroscopeListenableWidgetState();
+}
+
+class _GyroscopeListenableWidgetState extends State<GyroscopeListenableWidget> {
+  final ValueNotifier<Offset> listenable = ValueNotifier(Offset.zero);
+  late StreamSubscription subscription;
+  static const scale = 1;
+
+  @override
+  void initState() {
+    subscription = gyroscopeEvents.listen(handleEvent, cancelOnError: true);
+    super.initState();
+  }
+
+  handleEvent(GyroscopeEvent event) {
+    listenable.value = Offset(event.x * scale, event.y * scale);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, listenable, widget.child);
+  }
+
+  @override
+  void dispose() {
+    subscription.cancel();
+    super.dispose();
+  }
+}
+
+class AnimatedOffsetListenerWidget extends StatefulWidget {
+  const AnimatedOffsetListenerWidget({super.key, required this.builder, this.child});
 
   final ValueWidgetBuilder<Animation<Offset>> builder;
   final Widget? child;
 
   @override
-  State<AnimatedOffsetListenerProvider> createState() => _AnimatedOffsetListenerProviderState();
+  State<AnimatedOffsetListenerWidget> createState() => _AnimatedOffsetListenerWidgetState();
 }
 
-class _AnimatedOffsetListenerProviderState extends State<AnimatedOffsetListenerProvider>
+class _AnimatedOffsetListenerWidgetState extends State<AnimatedOffsetListenerWidget>
     with SingleTickerProviderStateMixin {
-  late AnimationController controller;
+  late AnimationController controller = AnimationController(vsync: this)
+    ..repeat(reverse: true, period: const Duration(seconds: 2));
 
-  @override
-  void initState() {
-    controller = AnimationController(vsync: this)
-      ..repeat(
-        reverse: true,
-        period: const Duration(seconds: 3),
-      );
-    super.initState();
-  }
+  static Tween<Offset> tween = Tween<Offset>(
+    begin: const Offset(-2.8, -.75),
+    end: const Offset(2.8, .75),
+  );
 
   @override
   Widget build(BuildContext context) {
     return widget.builder(
       context,
-      Tween<Offset>(begin: const Offset(-2, .0), end: const Offset(2, 1)).animate(
-        CurvedAnimation(parent: controller, curve: Curves.easeInOutQuad)..dispose(),
+      tween.animate(
+        CurvedAnimation(
+          parent: controller,
+          curve: Curves.easeInOutQuad,
+        )..dispose(),
       ),
       widget.child,
     );

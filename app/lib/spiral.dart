@@ -113,6 +113,7 @@ class DiffractionOffset extends InheritedWidget {
 
   /// [listenable] Offset must ba a normalized vector
   final ValueListenable<Offset> listenable;
+
   static DiffractionOffset? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<DiffractionOffset>();
   }
@@ -126,4 +127,3 @@ class DiffractionOffset extends InheritedWidget {
   @override
   bool updateShouldNotify(covariant InheritedWidget oldWidget) => false;
 }
-
