@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'builder.dart';
@@ -54,8 +55,6 @@ class DiffractionSpiral extends StatelessWidget {
                       return DiffractionPaint(
                         size: size,
                         shader: shader
-
-                          /// [0.5, 0.5] is in the middle of the diffraction effect
                           ..setFloat(4, value.dx + .5)
                           ..setFloat(5, value.dy + .5),
                       );
@@ -113,24 +112,7 @@ class DiffractionOffset extends InheritedWidget {
   const DiffractionOffset({super.key, required this.listenable, required super.child});
 
   /// [listenable] Offset must ba a normalized vector
-  final ValueNotifier<Offset> listenable;
-
-  setOffset(Offset value) {
-    listenable.value = value;
-  }
-
-  translate(double translateX, translateY) {
-    listenable.value = listenable.value.translate(translateX, translateY);
-  }
-
-  translateX(double value) {
-    listenable.value = listenable.value.translate(value, listenable.value.dy);
-  }
-
-  translateY(double value) {
-    listenable.value = listenable.value.translate(listenable.value.dx, value);
-  }
-
+  final ValueListenable<Offset> listenable;
   static DiffractionOffset? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<DiffractionOffset>();
   }
