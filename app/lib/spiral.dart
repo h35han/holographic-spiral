@@ -43,6 +43,7 @@ class DiffractionSpiral extends StatelessWidget {
 
                 return ShaderMask(
                   blendMode: BlendMode.dstIn,
+                  // blendMode: BlendMode.dst,
                   shaderCallback: (bound) => ImageShader(
                     alphaTexture,
                     TileMode.clamp,
