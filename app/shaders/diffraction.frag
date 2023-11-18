@@ -74,9 +74,9 @@ void main() {
     vec3 normal = normalize(clr.xyz * 2. - 1.);
     normal.x = 0. - normal.x;
 
-    vec3 dr = vec3(normalize(uv - offset), 1.);
-    float dp = max(dot(normal, dr), .0);
     float dst = distance(uv, offset);
+    vec3 dr = vec3(normalize(uv - offset), 1.);
+    float dp = pow(dot(normal, dr), 2.);
     float cdst = (dst - (dp * .5));
 
     vec3 color = spectral_zucconi6(cdst);
