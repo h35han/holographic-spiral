@@ -51,7 +51,7 @@ const vec3 ambient = vec3(1., 1., 1.25);
 void main() {
     vec2 uv = FlutterFragCoord().xy / resoltion;
 
-    // 2D Bilinear
+    // --- 2D Bilinear -----------------------------------------------
     // This is equivalent to FilterQuality.low
 
     vec2 st = uv * textureSize - 0.5;
@@ -69,7 +69,7 @@ void main() {
                     mix(c, d, fuv.x),
                     fuv.y);
 
-    // End of 2D Bilinear
+    // --- 2D Bilinear -----------------------------------------------
 
     vec3 normal = normalize(clr.xyz * 2. - 1.);
     normal.x = 0. - normal.x;

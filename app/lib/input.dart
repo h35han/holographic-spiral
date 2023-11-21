@@ -92,8 +92,16 @@ class AnimatedOffsetListenerWidget extends StatefulWidget {
 }
 
 class _AnimatedOffsetListenerWidgetState extends State<AnimatedOffsetListenerWidget> with TickerProviderStateMixin {
-  late AnimationController controller = AnimationController(vsync: this)
-    ..repeat(reverse: true, period: const Duration(seconds: 2));
+  late AnimationController controller = AnimationController(vsync: this);
+
+  @override
+  void initState() {
+    controller.repeat(
+      reverse: true,
+      period: const Duration(seconds: 2),
+    );
+    super.initState();
+  }
 
   static Tween<Offset> tween = Tween<Offset>(
     begin: const Offset(-2.8, -.75),
