@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
+enum InputSource { animated, gesture, gyro }
+
 class GestureDragOffsetListenableWidget extends StatefulWidget {
   const GestureDragOffsetListenableWidget({super.key, required this.builder, this.child});
 
