@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'showcase.dart';
 import 'input.dart';
 import 'spiral.dart';
-import '_/marker.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -53,16 +52,6 @@ class _HomeViewState extends State<HomeView> {
                 child: Card(),
               ),
             ),
-          ),
-          ValueListenableBuilder(
-            valueListenable: listenable,
-            builder: (context, value, child) {
-              return OffsetMarker(
-                correction: const Offset(.5, .5),
-                value: value,
-                child: child,
-              );
-            },
           ),
         ],
       );
